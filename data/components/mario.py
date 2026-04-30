@@ -456,7 +456,7 @@ class Mario(pg.sprite.Sprite):
             self.facing_right = True
             self.get_out_of_crouch()
             self.state = c.WALK
-        elif keys[tools.keybinding['jump']]:
+        elif keys[tools.keybinding['jump']] or keys[pg.K_SPACE]:
             if self.allow_jump:
                 if self.big:
                     setup.SFX['big_jump'].play()
@@ -487,7 +487,7 @@ class Mario(pg.sprite.Sprite):
 
     def check_to_allow_jump(self, keys):
         """Check to allow Mario to jump"""
-        if not keys[tools.keybinding['jump']]:
+        if not keys[tools.keybinding['jump']] and not keys[pg.K_SPACE]:
             self.allow_jump = True
 
 
@@ -557,7 +557,7 @@ class Mario(pg.sprite.Sprite):
             self.max_x_vel = c.MAX_WALK_SPEED
             self.x_accel = c.WALK_ACCEL
 
-        if keys[tools.keybinding['jump']]:
+        if keys[tools.keybinding['jump']] or keys[pg.K_SPACE]:
             if self.allow_jump:
                 if self.big:
                     setup.SFX['big_jump'].play()
@@ -650,7 +650,7 @@ class Mario(pg.sprite.Sprite):
             if self.x_vel < self.max_x_vel:
                 self.x_vel += self.x_accel
 
-        if not keys[tools.keybinding['jump']]:
+        if not keys[tools.keybinding['jump']] and not keys[pg.K_SPACE]:
             self.gravity = c.GRAVITY
             self.state = c.FALL
 
@@ -740,6 +740,7 @@ class Mario(pg.sprite.Sprite):
         if (self.current_time - self.transition_timer) >= start_time\
             and (self.current_time - self.transition_timer) < end_time:
             return True
+        return False
 
 
     def set_mario_to_middle_image(self):
@@ -989,7 +990,7 @@ class Mario(pg.sprite.Sprite):
         self.image = self.left_frames[9]
         right = self.rect.right
         #self.rect.bottom = 493
-        self.rect.x = right
+        self.rect.right = right
         if self.big:
             self.rect.x -= 10
         self.flag_pole_timer = 0

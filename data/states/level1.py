@@ -31,6 +31,7 @@ class Level1(tools._State):
 
         self.state = c.NOT_FROZEN
         self.death_timer = 0
+        self.lives_decremented = False
         self.flag_timer = 0
         self.flag_score = None
         self.flag_score_total = 0
@@ -311,6 +312,8 @@ class Level1(tools._State):
         self.mario = mario.Mario()
         self.mario.rect.x = self.viewport.x + 110
         self.mario.rect.bottom = c.GROUND_HEIGHT
+        # Ensure clean state for a fresh Mario
+        self.mario.image.set_alpha(255)
 
 
     def setup_checkpoints(self):
@@ -452,7 +455,7 @@ class Level1(tools._State):
             elif checkpoint.name == '12':
                 self.state = c.IN_CASTLE
                 self.mario.kill()
-                self.mario.state == c.STAND
+                self.mario.state = c.STAND
                 self.mario.in_castle = True
                 self.overhead_info_display.state = c.FAST_COUNT_DOWN
 
@@ -553,7 +556,7 @@ class Level1(tools._State):
                 self.mario.y_vel = -1
                 self.mario.state = c.BIG_TO_SMALL
                 self.convert_fireflowers_to_mushrooms()
-            elif self.mario.hurt_invincible:
+            elif self.mario.hurt_invincible or self.game_info.get('INVINCIBLE'):
                 pass
             else:
                 self.mario.start_death_jump(self.game_info)
@@ -675,7 +678,8 @@ class Level1(tools._State):
                 self.sprites_about_to_die_group.add(shell)
                 shell.start_death_jump(c.RIGHT)
             else:
-                if not self.mario.hurt_invincible and not self.mario.invincible:
+                if not self.mario.hurt_invincible and not self.mario.invincible \
+                        and not self.game_info.get('INVINCIBLE'):
                     self.state = c.FROZEN
                     self.mario.start_death_jump(self.game_info)
 
@@ -733,9 +737,9 @@ class Level1(tools._State):
                 obstacle2_distance *= -1
 
             if obstacle1_distance < obstacle2_distance:
-                obstacle2 = False
+                obstacle2 = None
             else:
-                obstacle1 = False
+                obstacle1 = None
 
         return obstacle1, obstacle2
 
@@ -1317,7 +1321,8 @@ class Level1(tools._State):
     def check_for_mario_death(self):
         """Restarts the level if Mario is dead"""
         if self.mario.rect.y > c.SCREEN_HEIGHT and not self.mario.in_castle:
-            self.mario.dead = True
+            if not self.mario.dead:
+                self.mario.start_death_jump(self.game_info)
             self.mario.x_vel = 0
             self.state = c.FROZEN
             self.game_info[c.MARIO_DEAD] = True
@@ -1338,10 +1343,12 @@ class Level1(tools._State):
         """sets the new game values after a player's death"""
         if self.game_info[c.SCORE] > self.persist[c.TOP_SCORE]:
             self.persist[c.TOP_SCORE] = self.game_info[c.SCORE]
-        if self.mario.dead:
+        if self.mario.dead and not self.lives_decremented:
             self.persist[c.LIVES] -= 1
+            self.lives_decremented = True
 
-        if self.persist[c.LIVES] == 0:
+        if self.persist[c.LIVES] <= 0:
+            self.persist[c.LIVES] = 0
             self.next = c.GAME_OVER
             self.game_info[c.CAMERA_START_X] = 0
         elif self.mario.dead == False:
@@ -1386,7 +1393,9 @@ class Level1(tools._State):
 
         if self.overhead_info_display.state == c.END_OF_LEVEL:
             self.state = c.FLAG_AND_FIREWORKS
-            self.flag_pole_group.add(castle_flag.Flag(8745, 322))
+            if not hasattr(self, '_castle_flag_added'):
+                self.flag_pole_group.add(castle_flag.Flag(8745, 322))
+                self._castle_flag_added = True
 
 
     def update_flag_and_fireworks(self):
@@ -1405,7 +1414,6 @@ class Level1(tools._State):
             self.flag_timer = self.current_time
         elif (self.current_time - self.flag_timer) > 2000:
             self.set_game_info_values()
-            self.next = c.GAME_OVER
             self.sound_manager.stop_music()
             self.done = True
 

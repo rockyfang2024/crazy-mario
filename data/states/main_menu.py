@@ -1,4 +1,4 @@
-__author__ = 'justinarmstrong'
+__author__ = 'justinarmstrong (modified)'
 
 import pygame as pg
 from .. import setup, tools
@@ -17,13 +17,13 @@ class Menu(tools._State):
                    c.CURRENT_TIME: 0.0,
                    c.LEVEL_STATE: None,
                    c.CAMERA_START_X: 0,
-                   c.MARIO_DEAD: False}
+                   c.MARIO_DEAD: False,
+                   'INVINCIBLE': False}
         self.startup(0.0, persist)
 
     def startup(self, current_time, persist):
-        """Called every time the game's state becomes this one.  Initializes
-        certain values"""
-        self.next = c.LOAD_SCREEN
+        """Called every time the game's state becomes this one."""
+        self.next = c.CONTROLS_SCREEN
         self.persist = persist
         self.game_info = persist
         self.overhead_info = info.OverheadInfo(self.game_info, c.MAIN_MENU)
@@ -33,14 +33,38 @@ class Menu(tools._State):
         self.setup_mario()
         self.setup_cursor()
 
+        # Fonts
+        self.font_item = pg.font.SysFont(None, 38)
+        self.font_setting = pg.font.SysFont(None, 28)
+        self.font_arrow = pg.font.SysFont(None, 32)
+
+        # Menu items: 0=START GAME, 1=LIVES, 2=INVINCIBLE
+        self.selected = 0
+        self.item_count = 3
+        self.item_y_start = 352
+        self.item_y_gap = 44
+
+        # Settings
+        self.lives = 3
+        self.invincible = False
+
+        # Read saved settings from persist
+        if self.game_info.get('INVINCIBLE') is not None:
+            self.invincible = self.game_info['INVINCIBLE']
+        if self.game_info.get('LIVES_SETTING') is not None:
+            self.lives = self.game_info['LIVES_SETTING']
+
+        # Input debounce timers
+        self.nav_timer = 0
+        self.adj_timer = 0
+
 
     def setup_cursor(self):
-        """Creates the mushroom cursor to select 1 or 2 player game"""
+        """Creates the mushroom cursor"""
         self.cursor = pg.sprite.Sprite()
-        dest = (220, 358)
+        dest = (220, self.item_y_start)
         self.cursor.image, self.cursor.rect = self.get_image(
             24, 160, 8, 8, dest, setup.GFX['item_objects'])
-        self.cursor.state = c.PLAYER1
 
 
     def setup_mario(self):
@@ -62,7 +86,6 @@ class Menu(tools._State):
         self.image_dict = {}
         self.image_dict['GAME_NAME_BOX'] = self.get_image(
             1, 60, 176, 88, (170, 100), setup.GFX['title_screen'])
-
 
 
     def get_image(self, x, y, width, height, dest, sprite_sheet):
@@ -88,13 +111,79 @@ class Menu(tools._State):
         return (image, rect)
 
 
+    def get_event(self, event):
+        """Handle keyboard events for the menu"""
+        if event.type != pg.KEYDOWN:
+            return
+
+        now = self.current_time
+        key = event.key
+
+        # Confirm selection: start game from any menu item
+        if key in (pg.K_RETURN, pg.K_a, pg.K_s, pg.K_SPACE):
+            self.reset_game_info()
+            self.done = True
+            return
+
+        # Navigation
+        if key == pg.K_DOWN:
+            if now - self.nav_timer > 180:
+                self.selected = (self.selected + 1) % self.item_count
+                self.nav_timer = now
+        elif key == pg.K_UP:
+            if now - self.nav_timer > 180:
+                self.selected = (self.selected - 1) % self.item_count
+                self.nav_timer = now
+
+        # Adjust settings with LEFT/RIGHT
+        elif key == pg.K_LEFT:
+            if self.selected == 1 and now - self.adj_timer > 120:
+                self.lives = max(1, self.lives - 1)
+                self.adj_timer = now
+            elif self.selected == 2 and now - self.adj_timer > 300:
+                self.invincible = not self.invincible
+                self.adj_timer = now
+        elif key == pg.K_RIGHT:
+            if self.selected == 1 and now - self.adj_timer > 120:
+                self.lives = min(99, self.lives + 1)
+                self.adj_timer = now
+            elif self.selected == 2 and now - self.adj_timer > 300:
+                self.invincible = not self.invincible
+                self.adj_timer = now
+
+
+    def reset_game_info(self):
+        """Resets the game info with current settings"""
+        self.game_info[c.COIN_TOTAL] = 0
+        self.game_info[c.SCORE] = 0
+        self.game_info[c.LIVES] = self.lives
+        self.game_info['INVINCIBLE'] = self.invincible
+        self.game_info['LIVES_SETTING'] = self.lives
+        self.game_info[c.CURRENT_TIME] = 0.0
+        self.game_info[c.LEVEL_STATE] = None
+        self.game_info[c.CAMERA_START_X] = 0
+        self.game_info[c.MARIO_DEAD] = False
+        self.persist = self.game_info
+
+
     def update(self, surface, keys, current_time):
         """Updates the state every refresh"""
         self.current_time = current_time
         self.game_info[c.CURRENT_TIME] = self.current_time
-        self.update_cursor(keys)
         self.overhead_info.update(self.game_info)
 
+        # Handle held keys for continuous adjustment
+        if self.selected == 1 and keys[pg.K_LEFT] and current_time - self.adj_timer > 80:
+            self.lives = max(1, self.lives - 1)
+            self.adj_timer = current_time
+        elif self.selected == 1 and keys[pg.K_RIGHT] and current_time - self.adj_timer > 80:
+            self.lives = min(99, self.lives + 1)
+            self.adj_timer = current_time
+
+        # Update cursor position
+        self.cursor.rect.y = self.item_y_start + self.selected * self.item_y_gap
+
+        # Draw everything
         surface.blit(self.background, self.viewport, self.viewport)
         surface.blit(self.image_dict['GAME_NAME_BOX'][0],
                      self.image_dict['GAME_NAME_BOX'][1])
@@ -102,47 +191,58 @@ class Menu(tools._State):
         surface.blit(self.cursor.image, self.cursor.rect)
         self.overhead_info.draw(surface)
 
-
-    def update_cursor(self, keys):
-        """Update the position of the cursor"""
-        input_list = [pg.K_RETURN, pg.K_a, pg.K_s]
-
-        if self.cursor.state == c.PLAYER1:
-            self.cursor.rect.y = 358
-            if keys[pg.K_DOWN]:
-                self.cursor.state = c.PLAYER2
-            for input in input_list:
-                if keys[input]:
-                    self.reset_game_info()
-                    self.done = True
-        elif self.cursor.state == c.PLAYER2:
-            self.cursor.rect.y = 403
-            if keys[pg.K_UP]:
-                self.cursor.state = c.PLAYER1
+        # Render menu
+        self.render_menu(surface)
 
 
-    def reset_game_info(self):
-        """Resets the game info in case of a Game Over and restart"""
-        self.game_info[c.COIN_TOTAL] = 0
-        self.game_info[c.SCORE] = 0
-        self.game_info[c.LIVES] = 3
-        self.game_info[c.CURRENT_TIME] = 0.0
-        self.game_info[c.LEVEL_STATE] = None
+    def render_menu(self, surface):
+        """Render menu items with settings"""
+        center_x = c.SCREEN_WIDTH // 2
 
-        self.persist = self.game_info
+        # --- Item 0: START GAME ---
+        y0 = self.item_y_start
+        color0 = c.GOLD if self.selected == 0 else c.WHITE
+        text0 = self.font_item.render('START GAME', True, color0)
+        rect0 = text0.get_rect(midleft=(275, y0))
+        surface.blit(text0, rect0)
 
+        # --- Item 1: LIVES ---
+        y1 = self.item_y_start + self.item_y_gap
+        color1 = c.GOLD if self.selected == 1 else c.WHITE
 
+        lbl1 = self.font_setting.render('LIVES', True, color1)
+        surface.blit(lbl1, lbl1.get_rect(midright=(center_x - 40, y1)))
 
+        # Value with arrow hints
+        val1 = self.font_setting.render(str(self.lives), True, color1)
+        surface.blit(val1, val1.get_rect(center=(center_x + 20, y1)))
 
+        if self.selected == 1:
+            arr_l = self.font_arrow.render('<', True, c.GOLD)
+            arr_r = self.font_arrow.render('>', True, c.GOLD)
+        else:
+            arr_l = self.font_arrow.render('<', True, c.GRAY)
+            arr_r = self.font_arrow.render('>', True, c.GRAY)
+        surface.blit(arr_l, arr_l.get_rect(midright=(center_x - 15, y1)))
+        surface.blit(arr_r, arr_r.get_rect(midleft=(center_x + 55, y1)))
 
+        # --- Item 2: INVINCIBLE ---
+        y2 = self.item_y_start + self.item_y_gap * 2
+        color2 = c.GOLD if self.selected == 2 else c.WHITE
 
+        lbl2 = self.font_setting.render('INVINCIBLE', True, color2)
+        surface.blit(lbl2, lbl2.get_rect(midright=(center_x - 40, y2)))
 
+        inv_str = 'ON' if self.invincible else 'OFF'
+        inv_color = c.GREEN if self.invincible else c.RED
+        val2 = self.font_setting.render(inv_str, True, inv_color)
+        surface.blit(val2, val2.get_rect(center=(center_x + 20, y2)))
 
-
-
-
-
-
-
-
-
+        if self.selected == 2:
+            arr_l2 = self.font_arrow.render('<', True, c.GOLD)
+            arr_r2 = self.font_arrow.render('>', True, c.GOLD)
+        else:
+            arr_l2 = self.font_arrow.render('<', True, c.GRAY)
+            arr_r2 = self.font_arrow.render('>', True, c.GRAY)
+        surface.blit(arr_l2, arr_l2.get_rect(midright=(center_x - 15, y2)))
+        surface.blit(arr_r2, arr_r2.get_rect(midleft=(center_x + 55, y2)))

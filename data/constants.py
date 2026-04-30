@@ -40,9 +40,9 @@ RUN_ACCEL = 20
 SMALL_TURNAROUND = .35
 
 GRAVITY = 1.01
-JUMP_GRAVITY = .31
-JUMP_VEL = -10
-FAST_JUMP_VEL = -12.5
+JUMP_GRAVITY = 0.28
+JUMP_VEL = -11
+FAST_JUMP_VEL = -11.5
 MAX_Y_VEL = 11
 
 MAX_RUN_SPEED = 800
@@ -157,6 +157,7 @@ MARIO_DEAD = 'mario dead'
 
 #STATES FOR ENTIRE GAME
 MAIN_MENU = 'main menu'
+CONTROLS_SCREEN = 'controls screen'
 LOAD_SCREEN = 'load screen'
 TIME_OUT = 'time out'
 GAME_OVER = 'game over'

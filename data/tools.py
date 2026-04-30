@@ -2,6 +2,7 @@ __author__ = 'justinarmstrong'
 
 import os
 import pygame as pg
+from . import constants as c
 
 keybinding = {
     'action':pg.K_s,
@@ -27,6 +28,10 @@ class Control(object):
         self.state_dict = {}
         self.state_name = None
         self.state = None
+        self.paused = False
+        self.paused_screen = None
+        self.pause_font = pg.font.SysFont(None, 72)
+        self.pause_sub_font = pg.font.SysFont(None, 32)
 
     def setup_states(self, state_dict, start_state):
         self.state_dict = state_dict
@@ -35,6 +40,11 @@ class Control(object):
 
     def update(self):
         self.current_time = pg.time.get_ticks()
+        if self.done:
+            return
+        if self.paused:
+            self.draw_pause_overlay()
+            return
         if self.state.quit:
             self.done = True
         elif self.state.done:
@@ -53,12 +63,28 @@ class Control(object):
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.done = True
+                return
             elif event.type == pg.KEYDOWN:
                 self.keys = pg.key.get_pressed()
                 self.toggle_show_fps(event.key)
+                # ESC to quit
+                if event.key == pg.K_ESCAPE:
+                    if self.paused:
+                        self.paused = False
+                    self.done = True
+                    return
+                # Enter to pause (only during gameplay)
+                if event.key == pg.K_RETURN and self.state_name == c.LEVEL1:
+                    if not self.paused:
+                        self.paused = True
+                        self.paused_screen = self.screen.copy()
+                    else:
+                        self.paused = False
+                    return
             elif event.type == pg.KEYUP:
                 self.keys = pg.key.get_pressed()
-            self.state.get_event(event)
+            if not self.paused:
+                self.state.get_event(event)
 
 
     def toggle_show_fps(self, key):
@@ -66,6 +92,24 @@ class Control(object):
             self.show_fps = not self.show_fps
             if not self.show_fps:
                 pg.display.set_caption(self.caption)
+
+
+    def draw_pause_overlay(self):
+        """Draw semi-transparent pause overlay"""
+        if self.paused_screen:
+            self.screen.blit(self.paused_screen, (0, 0))
+        overlay = pg.Surface(c.SCREEN_SIZE)
+        overlay.fill(c.BLACK)
+        overlay.set_alpha(128)
+        self.screen.blit(overlay, (0, 0))
+
+        text = self.pause_font.render('PAUSED', True, c.WHITE)
+        rect = text.get_rect(center=(c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2 - 20))
+        self.screen.blit(text, rect)
+
+        sub = self.pause_sub_font.render('Press ENTER to resume, ESC to quit', True, c.GRAY)
+        sub_rect = sub.get_rect(center=(c.SCREEN_WIDTH // 2, c.SCREEN_HEIGHT // 2 + 30))
+        self.screen.blit(sub, sub_rect)
 
 
     def main(self):
@@ -142,14 +186,3 @@ def load_all_sfx(directory, accept=('.wav','.mpe','.ogg','.mdi')):
         if ext.lower() in accept:
             effects[name] = pg.mixer.Sound(os.path.join(directory, fx))
     return effects
-
-
-
-
-
-
-
-
-
-
-

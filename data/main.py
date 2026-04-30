@@ -1,7 +1,7 @@
 __author__ = 'justinarmstrong'
 
 from . import setup,tools
-from .states import main_menu,load_screen,level1
+from .states import main_menu,load_screen,level1,controls_screen
 from . import constants as c
 
 
@@ -9,6 +9,7 @@ def main():
     """Add states to control here."""
     run_it = tools.Control(setup.ORIGINAL_CAPTION)
     state_dict = {c.MAIN_MENU: main_menu.Menu(),
+                  c.CONTROLS_SCREEN: controls_screen.ControlsScreen(),
                   c.LOAD_SCREEN: load_screen.LoadScreen(),
                   c.TIME_OUT: load_screen.TimeOut(),
                   c.GAME_OVER: load_screen.GameOver(),
