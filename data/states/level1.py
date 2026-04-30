@@ -543,10 +543,16 @@ class Level1(tools._State):
             self.adjust_mario_for_x_collisions(collider)
 
         elif enemy:
-            # Check INVINCIBLE setting first - when ON, Mario is immune and enemies don't die
+            # Check INVINCIBLE setting first - when ON, Mario kills enemy like bullet
             if self.game_info.get('INVINCIBLE'):
-                # Just pass, no damage, no enemy death
-                pass
+                setup.SFX['kick'].play()
+                self.game_info[c.SCORE] += 100
+                self.moving_score_list.append(
+                    score.Score(self.mario.rect.right - self.viewport.x,
+                                self.mario.rect.y, 100))
+                enemy.kill()
+                enemy.start_death_jump(c.RIGHT)
+                self.sprites_about_to_die_group.add(enemy)
             elif self.mario.invincible:
                 # Star power: enemy dies on side collision
                 setup.SFX['kick'].play()
@@ -716,16 +722,16 @@ class Level1(tools._State):
             self.adjust_mario_for_y_ground_pipe_collisions(ground_step_or_pipe)
 
         elif enemy:
-            # INVINCIBLE setting: Mario is immune and bounces like normal stomp
+            # INVINCIBLE setting: Mario kills enemy like bullet hit
             if self.game_info.get('INVINCIBLE'):
-                setup.SFX['stomp'].play()
-                enemy.state = c.JUMPED_ON
+                setup.SFX['kick'].play()
+                self.game_info[c.SCORE] += 100
+                self.moving_score_list.append(
+                    score.Score(enemy.rect.centerx - self.viewport.x,
+                                enemy.rect.y, 100))
                 enemy.kill()
-                if enemy.name == c.GOOMBA:
-                    enemy.death_timer = self.current_time
-                    self.sprites_about_to_die_group.add(enemy)
-                elif enemy.name == c.KOOPA:
-                    self.shell_group.add(enemy)
+                enemy.start_death_jump(c.RIGHT)
+                self.sprites_about_to_die_group.add(enemy)
                 self.mario.rect.bottom = enemy.rect.top
                 self.mario.state = c.JUMP
                 self.mario.y_vel = -7
