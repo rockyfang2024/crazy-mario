@@ -518,7 +518,9 @@ class Level1(tools._State):
             self.mario.rect.y += round(self.mario.y_vel)
             self.check_mario_y_collisions()
 
-        if self.mario.rect.x < (self.viewport.x + 5):
+        # Only constrain Mario's left position at the very start of the level
+        # Allow Mario to move backward after scrolling has occurred
+        if self.viewport.x == 0 and self.mario.rect.x < (self.viewport.x + 5):
             self.mario.rect.x = (self.viewport.x + 5)
 
 
@@ -541,7 +543,12 @@ class Level1(tools._State):
             self.adjust_mario_for_x_collisions(collider)
 
         elif enemy:
-            if self.mario.invincible:
+            # Check INVINCIBLE setting first - when ON, Mario is immune and enemies don't die
+            if self.game_info.get('INVINCIBLE'):
+                # Just pass, no damage, no enemy death
+                pass
+            elif self.mario.invincible:
+                # Star power: enemy dies on side collision
                 setup.SFX['kick'].play()
                 self.game_info[c.SCORE] += 100
                 self.moving_score_list.append(
@@ -556,7 +563,7 @@ class Level1(tools._State):
                 self.mario.y_vel = -1
                 self.mario.state = c.BIG_TO_SMALL
                 self.convert_fireflowers_to_mushrooms()
-            elif self.mario.hurt_invincible or self.game_info.get('INVINCIBLE'):
+            elif self.mario.hurt_invincible:
                 pass
             else:
                 self.mario.start_death_jump(self.game_info)
@@ -646,6 +653,10 @@ class Level1(tools._State):
 
     def adjust_mario_for_x_shell_collisions(self, shell):
         """Deals with Mario if he hits a shell moving on the x axis"""
+        # If INVINCIBLE setting is ON, Mario passes through shells without damage
+        if self.game_info.get('INVINCIBLE'):
+            return
+
         if shell.state == c.JUMPED_ON:
             if self.mario.rect.x < shell.rect.x:
                 self.game_info[c.SCORE] += 400
@@ -677,11 +688,11 @@ class Level1(tools._State):
                 shell.kill()
                 self.sprites_about_to_die_group.add(shell)
                 shell.start_death_jump(c.RIGHT)
+            elif self.mario.hurt_invincible:
+                pass
             else:
-                if not self.mario.hurt_invincible and not self.mario.invincible \
-                        and not self.game_info.get('INVINCIBLE'):
-                    self.state = c.FROZEN
-                    self.mario.start_death_jump(self.game_info)
+                self.state = c.FROZEN
+                self.mario.start_death_jump(self.game_info)
 
 
     def check_mario_y_collisions(self):
@@ -705,7 +716,21 @@ class Level1(tools._State):
             self.adjust_mario_for_y_ground_pipe_collisions(ground_step_or_pipe)
 
         elif enemy:
-            if self.mario.invincible:
+            # INVINCIBLE setting: Mario is immune and bounces like normal stomp
+            if self.game_info.get('INVINCIBLE'):
+                setup.SFX['stomp'].play()
+                enemy.state = c.JUMPED_ON
+                enemy.kill()
+                if enemy.name == c.GOOMBA:
+                    enemy.death_timer = self.current_time
+                    self.sprites_about_to_die_group.add(enemy)
+                elif enemy.name == c.KOOPA:
+                    self.shell_group.add(enemy)
+                self.mario.rect.bottom = enemy.rect.top
+                self.mario.state = c.JUMP
+                self.mario.y_vel = -7
+            elif self.mario.invincible:
+                # Star power: enemy dies and Mario bounces
                 setup.SFX['kick'].play()
                 enemy.kill()
                 self.sprites_about_to_die_group.add(enemy)
