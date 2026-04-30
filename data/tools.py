@@ -7,6 +7,8 @@ from . import constants as c
 keybinding = {
     'action':pg.K_s,
     'jump':pg.K_a,
+    'jump_alt':pg.K_SPACE,
+    'jump_up':pg.K_UP,
     'left':pg.K_LEFT,
     'right':pg.K_RIGHT,
     'down':pg.K_DOWN

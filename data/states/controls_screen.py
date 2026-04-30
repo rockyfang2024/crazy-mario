@@ -48,7 +48,7 @@ class ControlsScreen(tools._State):
 
         # Controls list
         controls = [
-            ('A / Space', 'Jump'),
+            ('UP / Space', 'Jump'),
             ('S', 'Action (Fireball / Run)'),
             ('Left / Right', 'Move'),
             ('Down', 'Crouch / Enter Pipe'),

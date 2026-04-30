@@ -33,9 +33,9 @@ class Menu(tools._State):
         self.setup_background()
         self.setup_mario()
 
-        # Menu items: 0=PLAYER_1, 1=PLAYER_2, 2=LIVES, 3=INVINCIBLE
+        # Menu items: 0=PLAYER_MODE, 1=LIVES, 2=INVINCIBLE
         self.selected = 0
-        self.item_count = 4
+        self.item_count = 3
         self.item_y_start = 280
         self.item_y_gap = 55
 
@@ -68,7 +68,7 @@ class Menu(tools._State):
     def setup_cursor(self):
         """Creates the mushroom cursor"""
         self.cursor = pg.sprite.Sprite()
-        dest = (170, self.item_y_start)
+        dest = (25, self.item_y_start)
         self.cursor.image, self.cursor.rect = self.get_image(
             24, 160, 8, 8, dest, setup.GFX['item_objects'])
 
@@ -143,23 +143,23 @@ class Menu(tools._State):
 
         # Adjust settings with LEFT/RIGHT
         elif key == pg.K_LEFT:
-            if self.selected == 1 and now - self.adj_timer > 120:
+            if self.selected == 0 and now - self.adj_timer > 120:
                 self.player_mode = 1
                 self.adj_timer = now
-            elif self.selected == 2 and now - self.adj_timer > 120:
+            elif self.selected == 1 and now - self.adj_timer > 120:
                 self.lives = max(1, self.lives - 1)
                 self.adj_timer = now
-            elif self.selected == 3 and now - self.adj_timer > 300:
+            elif self.selected == 2 and now - self.adj_timer > 300:
                 self.invincible = not self.invincible
                 self.adj_timer = now
         elif key == pg.K_RIGHT:
-            if self.selected == 1 and now - self.adj_timer > 120:
+            if self.selected == 0 and now - self.adj_timer > 120:
                 self.player_mode = 2
                 self.adj_timer = now
-            elif self.selected == 2 and now - self.adj_timer > 120:
+            elif self.selected == 1 and now - self.adj_timer > 120:
                 self.lives = min(99, self.lives + 1)
                 self.adj_timer = now
-            elif self.selected == 3 and now - self.adj_timer > 300:
+            elif self.selected == 2 and now - self.adj_timer > 300:
                 self.invincible = not self.invincible
                 self.adj_timer = now
 
@@ -187,22 +187,23 @@ class Menu(tools._State):
 
         # Handle held keys for continuous adjustment
         now = self.current_time
-        if self.selected == 1 and keys[pg.K_LEFT] and now - self.adj_timer > 80:
+        if self.selected == 0 and keys[pg.K_LEFT] and now - self.adj_timer > 80:
             self.player_mode = 1
             self.adj_timer = now
-        elif self.selected == 1 and keys[pg.K_RIGHT] and now - self.adj_timer > 80:
+        elif self.selected == 0 and keys[pg.K_RIGHT] and now - self.adj_timer > 80:
             self.player_mode = 2
             self.adj_timer = now
-        elif self.selected == 2 and keys[pg.K_LEFT] and now - self.adj_timer > 80:
+        elif self.selected == 1 and keys[pg.K_LEFT] and now - self.adj_timer > 80:
             self.lives = max(1, self.lives - 1)
             self.adj_timer = now
-        elif self.selected == 2 and keys[pg.K_RIGHT] and now - self.adj_timer > 80:
+        elif self.selected == 1 and keys[pg.K_RIGHT] and now - self.adj_timer > 80:
             self.lives = min(99, self.lives + 1)
             self.adj_timer = now
 
         # Update cursor position - vertical layout starting at y=280, gap=45
         start_y = 280
         item_gap = 45
+        self.cursor.rect.x = 25  # Align cursor with menu items (left_x = 45)
         self.cursor.rect.y = start_y + self.selected * item_gap
 
         # Draw everything
@@ -220,14 +221,15 @@ class Menu(tools._State):
     def render_menu(self, surface):
         """Render menu items with settings - vertical layout"""
         center_x = c.SCREEN_WIDTH // 2
-        left_x = 280
+        left_x = 45
         start_y = 280
         item_gap = 45
 
-        # Item 0: PLAYER 1
+        # Item 0: 1 PLAYER / 2 PLAYER
         y0 = start_y
         color0 = c.GOLD if self.selected == 0 else c.WHITE
-        text0 = self.font_item.render('PLAYER 1', True, color0)
+        player_text = '1 PLAYER' if self.player_mode == 1 else '2 PLAYER'
+        text0 = self.font_item.render(player_text, True, color0)
         rect0 = text0.get_rect(midleft=(left_x, y0))
         surface.blit(text0, rect0)
         if self.selected == 0:
@@ -239,52 +241,36 @@ class Menu(tools._State):
         surface.blit(arr_l, arr_l.get_rect(midright=(left_x - 20, y0)))
         surface.blit(arr_r, arr_r.get_rect(midleft=(left_x + rect0.width + 15, y0)))
 
-        # Item 1: PLAYER 2
+        # Item 1: LIVES
         y1 = start_y + item_gap
         color1 = c.GOLD if self.selected == 1 else c.WHITE
-        player_text = '1 PLAYER' if self.player_mode == 1 else '2 PLAYER'
-        text1 = self.font_item.render(player_text, True, color1)
-        rect1 = text1.get_rect(midleft=(left_x, y1))
-        surface.blit(text1, rect1)
+        lbl1 = self.font_item.render('LIVES', True, color1)
+        surface.blit(lbl1, lbl1.get_rect(midleft=(left_x, y1)))
+        val1 = self.font_item.render(str(self.lives), True, color1)
+        surface.blit(val1, val1.get_rect(midleft=(left_x + 120, y1)))
         if self.selected == 1:
-            arr_l = self.font_arrow.render('<', True, c.GOLD)
-            arr_r = self.font_arrow.render('>', True, c.GOLD)
+            arr_l1 = self.font_arrow.render('<', True, c.GOLD)
+            arr_r1 = self.font_arrow.render('>', True, c.GOLD)
         else:
-            arr_l = self.font_arrow.render('<', True, c.GRAY)
-            arr_r = self.font_arrow.render('>', True, c.GRAY)
-        surface.blit(arr_l, arr_l.get_rect(midright=(left_x - 20, y1)))
-        surface.blit(arr_r, arr_r.get_rect(midleft=(left_x + rect1.width + 15, y1)))
+            arr_l1 = self.font_arrow.render('<', True, c.GRAY)
+            arr_r1 = self.font_arrow.render('>', True, c.GRAY)
+        surface.blit(arr_l1, arr_l1.get_rect(midright=(left_x + 90, y1)))
+        surface.blit(arr_r1, arr_r1.get_rect(midleft=(left_x + 150, y1)))
 
-        # Item 2: LIVES
+        # Item 2: INVINCIBLE
         y2 = start_y + item_gap * 2
         color2 = c.GOLD if self.selected == 2 else c.WHITE
-        lbl2 = self.font_item.render('LIVES', True, color2)
+        lbl2 = self.font_item.render('INVINCIBLE', True, color2)
         surface.blit(lbl2, lbl2.get_rect(midleft=(left_x, y2)))
-        val2 = self.font_item.render(str(self.lives), True, color2)
-        surface.blit(val2, val2.get_rect(midleft=(left_x + 120, y2)))
+        inv_str = 'ON' if self.invincible else 'OFF'
+        inv_color = c.GREEN if self.invincible else c.RED
+        val2 = self.font_item.render(inv_str, True, inv_color)
+        surface.blit(val2, val2.get_rect(midleft=(left_x + 170, y2)))
         if self.selected == 2:
             arr_l2 = self.font_arrow.render('<', True, c.GOLD)
             arr_r2 = self.font_arrow.render('>', True, c.GOLD)
         else:
             arr_l2 = self.font_arrow.render('<', True, c.GRAY)
             arr_r2 = self.font_arrow.render('>', True, c.GRAY)
-        surface.blit(arr_l2, arr_l2.get_rect(midright=(left_x + 90, y2)))
-        surface.blit(arr_r2, arr_r2.get_rect(midleft=(left_x + 150, y2)))
-
-        # Item 3: INVINCIBLE
-        y3 = start_y + item_gap * 3
-        color3 = c.GOLD if self.selected == 3 else c.WHITE
-        lbl3 = self.font_item.render('INVINCIBLE', True, color3)
-        surface.blit(lbl3, lbl3.get_rect(midleft=(left_x, y3)))
-        inv_str = 'ON' if self.invincible else 'OFF'
-        inv_color = c.GREEN if self.invincible else c.RED
-        val3 = self.font_item.render(inv_str, True, inv_color)
-        surface.blit(val3, val3.get_rect(midleft=(left_x + 170, y3)))
-        if self.selected == 3:
-            arr_l3 = self.font_arrow.render('<', True, c.GOLD)
-            arr_r3 = self.font_arrow.render('>', True, c.GOLD)
-        else:
-            arr_l3 = self.font_arrow.render('<', True, c.GRAY)
-            arr_r3 = self.font_arrow.render('>', True, c.GRAY)
-        surface.blit(arr_l3, arr_l3.get_rect(midright=(left_x + 150, y3)))
-        surface.blit(arr_r3, arr_r3.get_rect(midleft=(left_x + 220, y3)))
+        surface.blit(arr_l2, arr_l2.get_rect(midright=(left_x + 150, y2)))
+        surface.blit(arr_r2, arr_r2.get_rect(midleft=(left_x + 220, y2)))
