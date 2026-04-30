@@ -36,3 +36,5 @@ ENV/
 
 # Project specific
 启动游戏.command
+.workbuddy
+workbuddy/
